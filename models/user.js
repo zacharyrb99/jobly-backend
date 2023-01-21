@@ -166,9 +166,11 @@ class User {
    */
 
   static async update(username, data) {
-    if (data.password) {
-      data.password = await bcrypt.hash(data.password, BCRYPT_WORK_FACTOR);
-    }
+    const userPassword = await db.query(`SELECT password FROM users WHERE username = $1`, [username]);
+    if (userPassword.rows.length == 0) throw new NotFoundError(`No user: ${username}`);
+    const passwordCheck = await bcrypt.compare(data.password, userPassword.rows[0].password)
+    if (!passwordCheck) throw new UnauthorizedError("Invalid username/password.");
+    data.password = await bcrypt.hash(data.password, BCRYPT_WORK_FACTOR);
 
     const { setCols, values } = sqlForPartialUpdate(
         data,
